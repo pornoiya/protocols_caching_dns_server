@@ -6,10 +6,13 @@ import sys
 class DNSHandler:
     @staticmethod
     def each_byte(str_byte: str, func, kwargs):
+        """Передаем функцию и аргументы,
+         которая применится к каждому байту из строки"""
         return [func(str_byte[2 * i:2 * i + 2], **kwargs) for i in range(len(str_byte) // 2)]
 
     @staticmethod
     def form_qname_part(domain: str):
+        """формируем часть днс запроса, кодируещего доменное имя"""
         labels = domain.split(".")
         qname = ""
         for label in labels:
@@ -19,6 +22,7 @@ class DNSHandler:
 
     @staticmethod
     def form_dns_request(domain_name, q_type):
+        """полностью формируем днс запрос"""
         header = "AA AA 01 00 00 01 00 00 00 00 00 00 "
         return header, f"{DNSHandler.form_qname_part(domain_name)}" \
             f"00 {const.RequestConstants.get_qtype_hex(q_type)} 00 01"
@@ -32,12 +36,14 @@ class DNSHandler:
         qtype = dns_answer[24 + offset + len(name) * 2 + 4: 24 + offset + len(name) * 2 + 8]
         qclass = dns_answer[24 + offset + len(name) * 2 + 8: 24 + offset + len(name) * 2 + 12]
 
+        # вычленяем все интеерсующие записи из ответа
         answer_name_class_type = dns_answer[24 + offset + len(name) * 2 + 12:24 + offset + len(name) * 2 + 28]
         ttl = dns_answer[24 + offset + len(name) * 2 + 28:24 + offset + len(name) * 2 + 32]
         answr_rdlength = dns_answer[24 + offset + len(name) * 2 + 32: 24 + offset + len(name) * 2 + 36]
         rdlength_ten_base = int(answr_rdlength, 16)
         rddata = dns_answer[24 + offset + len(name) * 2 + 36:24 + offset + len(name) * 2 + 36 + rdlength_ten_base * 2]
 
+        # обновляем локальный кеш
         resources.update({"reply_time": time.time()})
         resources.update({"ttl": int(ttl, 16)})
         resources.update({"answer_name": answer_name_class_type[:4]})
@@ -64,6 +70,8 @@ class DNSHandler:
         additional_info = dns_resp[20:24]
         offset = 0
         ip = "0.0.0.0"
+
+        # может придти несколько ответов, из каждого вычленим нужные записи
         for i in range(int(answers_count, 16)):
             try:
                 ip, offset = DNSHandler.parse_answer(dns_resp, session_cache, offset=offset * i)
@@ -74,6 +82,7 @@ class DNSHandler:
 
     @staticmethod
     def parse_name(dns_answer, start=24):
+        """вычленяем из байтов доменное имя"""
         name = []
         offset = 0
         while True:

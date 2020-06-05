@@ -16,6 +16,8 @@ class CacheHandler:
             return data
 
     def check_resources(self, cache: dict):
+        # проверяем поле ттл в записях кеша
+        # и обновляем если запись устарела
         to_delete = []
         for name in cache:
             print(name)
